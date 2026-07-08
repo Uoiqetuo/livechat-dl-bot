@@ -16,7 +16,6 @@ COPY app ./app
 COPY README.md .
 COPY .env.example .
 
-WORKDIR /app/app
 ENV PATH="/app/.venv/bin:$PATH"
 
-CMD ["python", "main.py"]
+CMD ["uv", "run", "python", "-m", "app.main"]

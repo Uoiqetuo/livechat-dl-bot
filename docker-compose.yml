@@ -5,11 +5,7 @@ services:
       context: .
     container_name: livechat-dl-bot
     restart: unless-stopped
-    environment:
-      DISCORD_TOKEN: ${DISCORD_TOKEN}
-      DOWNLOAD_DIR: /app/downloads
-      UPLOAD_TO_DISCORD: ${UPLOAD_TO_DISCORD}
+    env_file:
+      - .env
     volumes:
       - ./downloads:/app/downloads
-    working_dir: /app/app
-    command: ["python", "main.py"]

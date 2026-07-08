@@ -15,7 +15,7 @@
 
 1. Copy `.env.example` to `.env` and fill in `DISCORD_TOKEN`.
 2. Install dependencies with `uv sync`.
-3. Run the bot with `uv run python app/main.py`.
+3. Run the bot with `uv run python -m app.main`.
 
 ## Docker Deployment
 
