@@ -10,5 +10,6 @@ wheels/
 .venv
 
 .env
-
 downloads/
+cookies/*
+!cookies/PUT_COOKIES_FILE_HERE

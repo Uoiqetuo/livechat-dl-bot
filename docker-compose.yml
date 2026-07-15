@@ -9,3 +9,4 @@ services:
       - .env
     volumes:
       - ./downloads:/app/downloads
+      - ./cookies:/app/cookies

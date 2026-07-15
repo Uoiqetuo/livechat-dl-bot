@@ -1,4 +1,3 @@
-
 # livechat-dl-bot
 
 使用 yt-dlp 下載 youtube 聊天室 的 Discord 機器人
@@ -7,9 +6,10 @@
 
 1. 申請 Discord Bot 並取得 Token 後填入 .env 檔案的 `DISCORD_TOKEN` 變數。
 2. 在 `機器人` 頁面中啟用 `Message Content Intent` 權限。
-2. 在 `OAuth2` 頁面的 OAuth2 URL 產生器中選擇 `bot` 範圍，並勾選 `傳送訊息`、`管理訊息` 和 `附加檔案` 權限。
-3. 用步驟 2 產生的連結邀請機器人加入你的 Discord 伺服器。
-4. 部屬完成後在 Discord 頻道中使用指令 `!dl [youtube影片網址]` 來下載聊天室內容。
+3. 在 `OAuth2` 頁面的 OAuth2 URL 產生器中選擇 `bot` 範圍，並勾選 `傳送訊息`、`管理訊息` 和 `附加檔案` 權限。
+4. 用步驟 2 產生的連結邀請機器人加入你的 Discord 伺服器。
+5. （可選）在 .env 檔案中填入 `COOKIES_PATH` 變數，指定 Cookie 檔案路徑，並將 Cookie 檔案放在該路徑下。
+6. 部屬完成後在 Discord 頻道中使用指令 `!dl [youtube影片網址]` 來下載聊天室內容。
 
 ## Local Setup
 
@@ -41,3 +41,7 @@ docker run --rm \
 	-v "$PWD/downloads:/app/downloads" \
 	livechat-dl-bot
 ```
+
+## TODO
+
+- [x] 支援使用 cookie

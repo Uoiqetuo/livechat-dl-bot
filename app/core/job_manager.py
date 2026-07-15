@@ -5,10 +5,12 @@ from uuid import UUID, uuid4
 from typing import Any
 
 
-
+from app.conf import confs
+from app.core.cookie_file import CookieFile
 from app.core.worker import Worker
 from app.models.job import Job
 from app.models.status_view import StatusView
+from app.runtime_config import DOWNLOAD_DIR, COOKIES_PATH
 
 logger = logging.getLogger(__name__)
 
@@ -27,15 +29,30 @@ class JobManager:
             except Exception:
                 logger.exception(f"Job {job.id} failed")
             finally:
+                job.cleanup()
                 self.jobs.pop(job.id, None)
                 self.queue.task_done()
 
     async def create_job(
-        self, url: str, opts: dict[str, Any], message: discord.Message
+        self,
+        url: str,
+        message: discord.Message,
+        use_cookie: bool = False,
     ) -> UUID:
+        opts: dict[str, Any] = confs.get("default", {}) | confs.get("chat", {})
+
+        # 設定下載路徑
+        paths = dict(opts.get("paths", {}))
+        paths["home"] = str(DOWNLOAD_DIR)
+        opts["paths"] = paths
+
+        cookie = CookieFile(COOKIES_PATH) if use_cookie else None
+        if cookie:
+            opts["cookiefile"] = cookie.path
+
         status_view = await StatusView.create(message, lambda: self.cancel_job(job.id))
 
-        job = Job(id=uuid4(), url=url, opts=opts, view=status_view)
+        job = Job(id=uuid4(), url=url, opts=opts, view=status_view, cookie=cookie)
 
         self.jobs[job.id] = job
 

@@ -1,14 +1,12 @@
 # from yt_dlp import _Params
 
-from typing import Any
-
 
 confs = {
+# confs: dict[str, _Params] = {
     "default": {
         "retries": 60,
-        "outtmpl": "%(uploader)s/%(release_date,upload_date)s - %(title)s [%(id)s].%(ext)s"
+        "outtmpl": "%(uploader)s/%(release_date,upload_date)s - %(title)s [%(id)s].%(ext)s",
     },
-
     "chat": {
         "quiet": True,
         "noprogress": True,
@@ -19,6 +17,6 @@ confs = {
         "nopart": True,
         "retry_sleep_functions": {
             "default": lambda x: 2,
-        }
-    }
+        },
+    },
 }

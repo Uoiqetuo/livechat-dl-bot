@@ -3,6 +3,7 @@ from enum import Enum
 from pathlib import Path
 from uuid import UUID
 
+from app.core.cookie_file import CookieFile
 from app.models.status_view import StatusView
 
 
@@ -30,7 +31,12 @@ class Job:
     url: str
     opts: dict
     view: StatusView
+    cookie: CookieFile | None = None
     status: JobStatus = JobStatus.PENDING
     canceled: bool = False
     downloaded_path: Path | None = None
     archived_paths: list[Path] | None = None
+
+    def cleanup(self):
+        if self.cookie:
+            self.cookie.cleanup()

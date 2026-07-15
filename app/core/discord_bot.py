@@ -1,45 +1,46 @@
 import os
 import logging
-
 import discord
+from discord.ext import commands
 
-from app.core.job_manager import job_manager_instance
-from app.conf import confs
-from app.runtime_config import DOWNLOAD_DIR
+from app.core.cogs.dl import DownloadCog
 
 logger = logging.getLogger(__name__)
 
 
-class Bot(discord.Client):
+class Bot(commands.Bot):
     def __init__(self) -> None:
         intents = discord.Intents.default()
         intents.message_content = True
-        super().__init__(intents=intents)
+        super().__init__(
+            command_prefix="!",
+            intents=intents,
+        )
 
-    async def start_bot(self):
-        TOKEN = os.getenv("DISCORD_TOKEN")
-        if not TOKEN:
+    async def setup_hook(self) -> None:
+        await self.add_cog(DownloadCog(self))
+
+    async def start_bot(self) -> None:
+        token = os.getenv("DISCORD_TOKEN")
+        if not token:
             raise ValueError("DISCORD_TOKEN is not set in the environment variables.")
-        await self.start(TOKEN)
 
-    async def on_ready(self):
+        await self.start(token)
+
+    async def on_ready(self) -> None:
         logger.info("%s 已連接到以下伺服器:", self.user)
         for guild in self.guilds:
             logger.info(" - %s (ID: %s)", guild.name, guild.id)
 
-    async def on_message(self, message: discord.Message):
-        if message.author == self.user:
+    async def on_command_error(
+        self,
+        ctx: commands.Context,
+        error: commands.CommandError,
+    ) -> None:
+        if isinstance(error, commands.MissingRequiredArgument):
+            await ctx.reply("請提供 URL")
+        elif isinstance(error, commands.CommandNotFound):
             return
-
-        if message.content.startswith("!dl"):
-            url = message.content.split()[1]
-            if not url:
-                await message.reply("請提供 URL")
-                return
-
-            opts = confs.get("default", {}) | confs.get("chat", {})
-            paths = dict(opts.get("paths", {}))
-            paths["home"] = str(DOWNLOAD_DIR)
-            opts["paths"] = paths
-
-            await job_manager_instance.create_job(url, opts, message)
+        else:
+            logger.exception("Command error", exc_info=error)
+            await ctx.reply(f"發生錯誤：{error}")
