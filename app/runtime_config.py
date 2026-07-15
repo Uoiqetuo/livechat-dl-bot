@@ -28,3 +28,5 @@ UPLOAD_TO_DISCORD = _env_flag("UPLOAD_TO_DISCORD", False)
 LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO").strip().upper()
 
 COOKIES_PATH = os.getenv("COOKIES_PATH", "./cookies/cookies.txt")
+
+POT_BGUTIL_PROVIDER_URL = os.getenv("POT_BGUTIL_PROVIDER_URL", "http://localhost:4416")

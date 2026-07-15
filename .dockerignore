@@ -6,6 +6,7 @@ __pycache__
 *.pyd
 .env
 downloads
+cookies
 build
 dist
 *.egg-info

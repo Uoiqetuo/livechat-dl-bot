@@ -10,3 +10,9 @@ services:
     volumes:
       - ./downloads:/app/downloads
       - ./cookies:/app/cookies
+
+  bgutil-provider:
+    image: brainicism/bgutil-ytdlp-pot-provider
+    container_name: bgutil-ytdlp-pot-provider
+    restart: unless-stopped
+    init: true
