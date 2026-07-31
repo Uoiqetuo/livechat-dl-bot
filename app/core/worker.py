@@ -41,6 +41,7 @@ class Worker:
             await self.uploader.upload(job, cleanup=True)
 
         job.status = JobStatus.FINISHED
-        job.view.show_controls = False
+        if job.view:
+            job.view.show_controls = False
         await update_status_msg(job.id)
         logger.info(f"任務完成: {job.url}, 檔案路徑: {job.archived_paths}")

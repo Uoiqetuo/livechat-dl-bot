@@ -7,6 +7,7 @@ from typing import Any
 
 from app.conf import confs
 from app.core.cookie_file import CookieFile
+from app.core.downloader import Downloader
 from app.core.worker import Worker
 from app.models.job import Job
 from app.models.status_view import StatusView
@@ -20,6 +21,7 @@ class JobManager:
         self.jobs: dict[UUID, Job] = {}
         self.queue = asyncio.Queue()
         self.workers = [Worker() for _ in range(workers)]
+        self.metadata_downloader = Downloader()
 
     async def worker_loop(self, worker: Worker):
         while True:
@@ -50,9 +52,36 @@ class JobManager:
         if cookie:
             opts["cookiefile"] = cookie.path
 
-        status_view = await StatusView.create(message, lambda: self.cancel_job(job.id))
+        metadata = await asyncio.to_thread(
+            self.metadata_downloader.extract_metadata, url, opts
+        )
 
-        job = Job(id=uuid4(), url=url, opts=opts, view=status_view, cookie=cookie)
+        job = Job(
+            id=uuid4(),
+            url=url,
+            opts=opts,
+            view=None,
+            cookie=cookie,
+            video_title=metadata.get("title"),
+            video_url=metadata.get("webpage_url") or url,
+            channel_name=metadata.get("uploader") or metadata.get("channel"),
+            channel_url=metadata.get("uploader_url") or metadata.get("channel_url"),
+            planned_start_timestamp=(
+                metadata.get("release_timestamp") or metadata.get("timestamp")
+            ),
+            release_timestamp=metadata.get("release_timestamp"),
+            duration=metadata.get("duration"),
+            live_status=metadata.get("live_status"),
+            extractor_key=metadata.get("extractor_key"),
+            extractor=metadata.get("extractor"),
+            video_id=metadata.get("id"),
+            thumbnail_url=metadata.get("thumbnail"),
+        )
+
+        status_view = await StatusView.create(
+            message, lambda: self.cancel_job(job.id), job
+        )
+        job.view = status_view
 
         self.jobs[job.id] = job
 
@@ -72,7 +101,6 @@ class JobManager:
         if not job or not job.view:
             raise ValueError(f"No job or view found for job ID: {job_id}")
 
-        job.view.title = f"任務狀態: {job.status.value.capitalize()}"
         await job.view.submit()
 
     async def start(self):

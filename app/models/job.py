@@ -1,4 +1,5 @@
 from attr import dataclass
+from datetime import datetime
 from enum import Enum
 from pathlib import Path
 from uuid import UUID
@@ -8,21 +9,19 @@ from app.models.status_view import StatusView
 
 
 class JobStatus(Enum):
-    PENDING = "pending"
+    WAITING = "等待中"
 
-    WAITING = "waiting"
+    DOWNLOADING = "下載中"
 
-    DOWNLOADING = "downloading"
+    ARCHIVING = "封存中"
 
-    ARCHIVING = "archiving"
+    UPLOADING = "上傳中"
 
-    UPLOADING = "uploading"
+    FINISHED = "已完成"
 
-    FINISHED = "finished"
+    CANCELED = "已取消"
 
-    CANCELED = "canceled"
-
-    FAILED = "failed"
+    FAILED = "失敗"
 
 
 @dataclass
@@ -30,12 +29,25 @@ class Job:
     id: UUID
     url: str
     opts: dict
-    view: StatusView
+    view: StatusView | None
     cookie: CookieFile | None = None
-    status: JobStatus = JobStatus.PENDING
+    status: JobStatus = JobStatus.WAITING
     canceled: bool = False
     downloaded_path: Path | None = None
     archived_paths: list[Path] | None = None
+    video_title: str | None = None
+    video_url: str | None = None
+    channel_name: str | None = None
+    channel_url: str | None = None
+    planned_start_timestamp: int | None = None
+    release_timestamp: int | None = None
+    duration: int | float | None = None
+    live_status: str | None = None
+    extractor_key: str | None = None
+    extractor: str | None = None
+    recording_finished_at: datetime | None = None
+    video_id: str | None = None
+    thumbnail_url: str | None = None
 
     def cleanup(self):
         if self.cookie:
