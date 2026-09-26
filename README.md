@@ -1,47 +1,65 @@
-# livechat-dl-bot
+# Discord YouTube Live Chat Downloader
 
-使用 yt-dlp 下載 youtube 聊天室 的 Discord 機器人
+Python 3.12+ Discord bot which records YouTube Live Chat with `yt-dlp`, creates
+one canonical ZIP per job, and uploads it to the job's original Discord message.
+The canonical ZIP is retained in `data/jobs/` after a successful upload.
 
-## 使用方式
+## Setup
 
-1. 申請 Discord Bot 並取得 Token 後填入 .env 檔案的 `DISCORD_TOKEN` 變數。
-2. 在 `機器人` 頁面中啟用 `Message Content Intent` 權限。
-3. 在 `OAuth2` 頁面的 OAuth2 URL 產生器中選擇 `bot` 範圍，並勾選 `傳送訊息`、`管理訊息` 和 `附加檔案` 權限。
-4. 用步驟 2 產生的連結邀請機器人加入你的 Discord 伺服器。
-5. （可選）在 .env 檔案中填入 `COOKIES_PATH` 變數，指定 Cookie 檔案路徑，並將 Cookie 檔案放在該路徑下。
-6. 部屬完成後在 Discord 頻道中使用指令 `!dl [youtube影片網址]` 來下載聊天室內容。
+Create a Discord application and bot, enable the **Message Content Intent**, and
+invite it with View Channel, Send Messages, Embed Links, Attach Files and Read
+Message History permissions. Copy `.env.example` to `.env` and set
+`DISCORD_TOKEN`. `DISCORD_MAX_FILE_SIZE` is required when Discord does not expose
+the guild attachment limit (bytes).
 
-## Local Setup
-
-1. Copy `.env.example` to `.env` and fill in `DISCORD_TOKEN`.
-2. Install dependencies with `uv sync`.
-3. Run the bot with `uv run python -m app.main`.
-
-## Docker Deployment
-
-### Build and run with Docker Compose
-
-1. Copy `.env.example` to `.env` and set `DISCORD_TOKEN`.
-2. Start the service with `docker compose up --build`.
-3. Downloaded files are stored in `./downloads` on the host and mirrored inside the container at `/app/downloads`.
-
-### Manual Docker build
-
-Build the image:
+Run directly:
 
 ```bash
-docker build -t livechat-dl-bot .
+python -m venv .venv && . .venv/bin/activate
+pip install -e '.[test]'
+# Install Node.js separately; it is used by yt-dlp's EJS support.
+python -m livechat_bot
 ```
 
-Run it with an env file and a downloads mount:
+Run with Docker Compose:
 
 ```bash
-docker run --rm \
-	--env-file .env \
-	-v "$PWD/downloads:/app/downloads" \
-	livechat-dl-bot
+cp .env.example .env       # set DISCORD_TOKEN
+docker compose up --build
 ```
 
-## TODO
+The Docker image includes Node.js 22 and `yt-dlp-ejs` support for YouTube's
+JavaScript challenges. Local development does not install Node.js automatically;
+install Node.js 20 or newer separately and ensure `node` is available on `PATH`
+before running the bot. See the
+[yt-dlp EJS setup guide](https://github.com/yt-dlp/yt-dlp/wiki/EJS) for runtime
+requirements.
 
-- [x] 支援使用 cookie
+`DATA_DIR` contains `database.sqlite3` and dated `jobs/YYYYMMDD/<job-id>/`
+directories. Back up this directory; completed ZIP files are not recreated
+automatically. Configuration includes `MAX_CONCURRENT_JOBS`,
+`MIN_FREE_DISK_GB`, `DISCORD_UPLOAD_RETRY_COUNT`, `DISCORD_UI_TIMEZONE`, and
+`SHUTDOWN_TIMEOUT_SECONDS`.
+
+To use authenticated YouTube access, place a Netscape-format cookies file at
+the path configured by `COOKIES_FILE`. `!dl -c <YouTube URL>` uses that file;
+`!dl <YouTube URL>` does not use cookies. The configured path must point to a
+`.txt` or `.cookies` file. With Docker Compose, put the file in
+`./cookies/cookies.txt`; the directory is mounted read-only at `/cookies` and
+`COOKIES_FILE` is set to `/cookies/cookies.txt`.
+When a job starts, the bot copies this file into the job directory and passes
+the copy to yt-dlp, allowing yt-dlp to update the job-specific cookie file.
+The temporary copy is deleted when the job ends.
+
+Use `!dl <YouTube URL>` in a channel where the bot can post. The bot never
+displays recording progress and does not resume jobs after restart; interrupted
+jobs are marked failed at startup. Cancel from the button on the job message.
+
+Tests:
+
+```bash
+pytest
+```
+
+If a job fails, inspect the application logs and retain the job directory for
+manual recovery. Never put the bot token in source control.

@@ -1,15 +1,10 @@
-# Python-generated files
-__pycache__/
-*.py[oc]
-build/
-dist/
-wheels/
-*.egg-info
-
-# Virtual environments
-.venv
-
 .env
-downloads/
 cookies/*
 !cookies/PUT_COOKIES_FILE_HERE
+__pycache__/
+*.py[cod]
+.pytest_cache/
+*.egg-info/
+data/database.sqlite3
+data/jobs/*
+!data/jobs/.gitkeep

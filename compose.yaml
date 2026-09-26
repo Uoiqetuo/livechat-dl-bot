@@ -1,0 +1,10 @@
+services:
+  discord-livechat-bot:
+    build: .
+    env_file: .env
+    environment:
+      COOKIES_FILE: /cookies/cookies.txt
+    volumes:
+      - ./data:/data
+      - ./cookies:/cookies:ro
+    restart: unless-stopped
