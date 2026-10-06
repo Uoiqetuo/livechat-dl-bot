@@ -69,8 +69,9 @@ host is logged at startup; credentials in the URL are redacted.
 
 ### Cloudflare WARP sidecar
 
-`compose.yaml` ships a WARP service that provides such a proxy. Uncomment the
-`warp` service, the `YOUTUBE_PROXY` line and `depends_on` together, then:
+`compose.yaml` ships a commented-out WARP service that provides such a proxy.
+Uncomment the `warp` block, the `YOUTUBE_PROXY` line and `depends_on`
+together, then:
 
 ```bash
 docker compose up -d warp

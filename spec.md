@@ -2234,8 +2234,10 @@ Configuration reaches `YTDLPClient` through `Config.load()` and constructor
 injection; `main.py` performs the wiring.
 
 `compose.yaml` ships a commented-out Cloudflare WARP sidecar supplying such a
-proxy, together with the matching `YOUTUBE_PROXY` and `depends_on` lines. All
-three must be enabled together.
+proxy. It is commented out by default, so a deployment that does not need the
+proxy starts only the bot and connects directly. Uncommenting the `warp`
+block, the `YOUTUBE_PROXY` line and `depends_on` enables it. All three must be
+enabled together.
 
 The sidecar must run in WARP proxy mode. In proxy mode WARP binds its listener
 to the container loopback and a forwarder publishes it on the Compose network,
