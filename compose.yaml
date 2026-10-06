@@ -1,14 +1,40 @@
 services:
   # Optional: outbound proxy for yt-dlp. Enable only when the host IP is a
   # datacenter range that YouTube throttles or rejects (HTTP 403/503 on the
-  # live_chat endpoint). Keep this in proxy mode: it exposes a SOCKS5 listener
-  # and leaves the routing table and DNS alone, so Tailscale keeps working.
-  # warp:
-  #   image: ghcr.io/aleskxyz/warp-svc:latest
-  #   container_name: warp
-  #   volumes:
-  #     - ./warp:/var/lib/cloudflare-warp   # persists the WARP registration
-  #   restart: unless-stopped
+  # live_chat endpoint). Keep WARP in proxy mode: it then exposes a SOCKS5
+  # listener and leaves the routing table and DNS alone, so a co-installed
+  # Tailscale node keeps working. WARP's default mode replaces both.
+  #
+  # One-time bootstrap after the first `docker compose up -d warp`, which only
+  # registers the account and connects in full-tunnel mode:
+  #   docker compose exec warp warp-cli --accept-tos mode proxy
+  #   docker compose exec warp warp-cli --accept-tos proxy port 40000
+  #   docker compose up -d --force-recreate warp
+  warp:
+    image: caomingjun/warp
+    container_name: warp
+    restart: always
+    # Re-add a rule removed by containerd >= 1.7.24 so the container may open a
+    # tun device. Without it the daemon fails with "Operation not permitted".
+    device_cgroup_rules:
+      - 'c 10:200 rwm'
+    cap_add:
+      - NET_ADMIN
+    sysctls:
+      net.ipv6.conf.all.disable_ipv6: "0"
+      net.ipv4.conf.all.src_valid_mark: "1"
+    environment:
+      WARP_SLEEP: "5"
+      # GOST listens on :1080 so other containers can reach it, and forwards to
+      # the WARP proxy-mode listener, which binds 127.0.0.1 inside this
+      # container only. GOST_ARGS must stay quoted: unquoted it is still valid
+      # YAML, but quoting avoids surprises if the arguments ever change.
+      GOST_ARGS: "-L :1080 -F=127.0.0.1:40000"
+    expose:
+      - "1080"
+    volumes:
+      - ./warp:/var/lib/cloudflare-warp          # persists the WARP registration
+      - ./docker/warp-healthcheck.sh:/healthcheck/connected-to-warp.sh:ro
 
   discord-livechat-bot:
     image: livechat-dl-bot:latest

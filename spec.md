@@ -2235,12 +2235,28 @@ injection; `main.py` performs the wiring.
 
 `compose.yaml` ships a commented-out Cloudflare WARP sidecar supplying such a
 proxy, together with the matching `YOUTUBE_PROXY` and `depends_on` lines. All
-three must be enabled together. The sidecar must run in proxy mode: it then
-exposes a SOCKS5 listener and leaves the routing table and DNS untouched.
-WARP's default mode replaces routes and DNS, which breaks a co-installed
-Tailscale node. The WARP registration directory is host-mounted so the
-registration survives restarts, and is excluded from source control and the
-Docker build context.
+three must be enabled together.
+
+The sidecar must run in WARP proxy mode. In proxy mode WARP binds its listener
+to the container loopback and a forwarder publishes it on the Compose network,
+so the host routing table and DNS are left untouched. WARP's default
+full-tunnel mode replaces both, which breaks a co-installed Tailscale node.
+
+The WARP registration volume is host-mounted so registration survives restarts,
+and is excluded from source control and the Docker build context. The sidecar
+requires a tun device, so the Compose definition re-adds the device cgroup rule
+removed by containerd 1.7.24 or later and grants `NET_ADMIN`.
+
+Bootstrapping is a one-time step. The client must connect in full-tunnel mode
+before it can be switched, so proxy mode is entered after the first successful
+registration and the sidecar is then recreated.
+
+The sidecar health check must verify the tunnel, not merely that the daemon
+started, by requiring a request through the SOCKS5 listener to report the
+tunnel as active. The built-in check does not cover this.
+
+Because a successful download alone does not prove the proxy is in use, the
+exit IP must be inspected: the tunnel address, not the host address.
 
 The Discord UI contains no progress percentage, ETA, speed, byte count, progress bar, or chat-message count.
 
