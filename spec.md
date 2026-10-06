@@ -467,7 +467,8 @@ ydl_opts = {
 
 The same `js_runtimes` option must be used for metadata resolution and live
 chat download. If `cookies_file` is provided, pass it to yt-dlp as
-`"cookiefile": str(cookies_file)`.
+`"cookiefile": str(cookies_file)`. If a proxy is configured, pass it to both
+calls as `"proxy": proxy`.
 
 The output filename must be based on the YouTube video ID.
 
@@ -1773,6 +1774,8 @@ DISCORD_UI_TIMEZONE=Asia/Taipei
 
 Optional permission configuration may be added if required.
 
+Optional proxy configuration is documented in section 60.
+
 Do not hard-code credentials.
 
 ---
@@ -2197,6 +2200,47 @@ no recovery
     ↓
 previous non-terminal Jobs → FAILED
 ```
+
+---
+
+# 60. Outbound Proxy
+
+YouTube may throttle or reject the `live_chat` endpoint when the host IP
+belongs to a datacenter range, returning HTTP 403 or HTTP 503 even when the
+cookies are valid. A proxy is therefore supported as an optional outbound path
+for yt-dlp only.
+
+Configuration:
+
+```env
+YOUTUBE_PROXY=socks5://warp:1080
+```
+
+Requirements:
+
+* Read the proxy from the environment, never from source control.
+* `YOUTUBE_PROXY` applies to yt-dlp only and takes precedence.
+* `HTTPS_PROXY`, `https_proxy`, `HTTP_PROXY` and `http_proxy` are honoured as
+  fallbacks, in that order, when `YOUTUBE_PROXY` is unset or empty.
+* Accept `http`, `https`, `socks5` and `socks5h` URLs. No extra Python package
+  is required; yt-dlp bundles its own SOCKS client.
+* When unset, connect directly. The proxy must not change any behaviour other
+  than the network path.
+* Apply the proxy identically to metadata resolution and live chat download.
+* Log the active proxy once at startup, with any credentials in the URL
+  redacted. Never log the raw proxy URL.
+
+Configuration reaches `YTDLPClient` through `Config.load()` and constructor
+injection; `main.py` performs the wiring.
+
+`compose.yaml` ships a commented-out Cloudflare WARP sidecar supplying such a
+proxy, together with the matching `YOUTUBE_PROXY` and `depends_on` lines. All
+three must be enabled together. The sidecar must run in proxy mode: it then
+exposes a SOCKS5 listener and leaves the routing table and DNS untouched.
+WARP's default mode replaces routes and DNS, which breaks a co-installed
+Tailscale node. The WARP registration directory is host-mounted so the
+registration survives restarts, and is excluded from source control and the
+Docker build context.
 
 The Discord UI contains no progress percentage, ETA, speed, byte count, progress bar, or chat-message count.
 

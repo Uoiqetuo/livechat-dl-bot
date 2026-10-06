@@ -23,7 +23,7 @@ async def run(config: Config) -> None:
     repository = JobRepository(database)
     await repository.initialize()
     await repository.mark_non_terminal_jobs_failed_on_startup()
-    youtube = YTDLPClient()
+    youtube = YTDLPClient(config.proxy)
     archive = ArchiveService(ZipService())
     policy = DiscordUploadPolicy(config.discord_max_file_size)
     # The uploader is attached after bot construction.

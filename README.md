@@ -51,6 +51,28 @@ When a job starts, the bot copies this file into the job directory and passes
 the copy to yt-dlp, allowing yt-dlp to update the job-specific cookie file.
 The temporary copy is deleted when the job ends.
 
+### Outbound proxy
+
+If the host IP is a datacenter range, YouTube may throttle or reject the
+`live_chat` endpoint with HTTP 403 or 503 even when cookies are valid. Set
+`YOUTUBE_PROXY` to route yt-dlp through a proxy:
+
+```env
+YOUTUBE_PROXY=socks5://warp:1080
+```
+
+Accepted schemes are `http`, `https`, `socks5` and `socks5h`. yt-dlp ships its
+own SOCKS client, so no extra Python package is required. `HTTPS_PROXY`,
+`HTTP_PROXY` and their lowercase variants are honoured as fallbacks when
+`YOUTUBE_PROXY` is unset. Leave it unset to connect directly. Only the proxy
+host is logged at startup; credentials in the URL are redacted.
+
+`compose.yaml` ships a commented-out Cloudflare WARP sidecar that provides such
+a proxy. Uncomment the `warp` service, the `YOUTUBE_PROXY` line and
+`depends_on` together. WARP runs in proxy mode, so it only opens a SOCKS5
+listener and leaves the routing table and DNS untouched — unlike its default
+mode, which hijacks routing and DNS and breaks Tailscale.
+
 Use `!dl <YouTube URL>` in a channel where the bot can post. The bot never
 displays recording progress and does not resume jobs after restart; interrupted
 jobs are marked failed at startup. Cancel from the button on the job message.

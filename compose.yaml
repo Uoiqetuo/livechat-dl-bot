@@ -1,9 +1,28 @@
 services:
+  # Optional: outbound proxy for yt-dlp. Enable only when the host IP is a
+  # datacenter range that YouTube throttles or rejects (HTTP 403/503 on the
+  # live_chat endpoint). Keep this in proxy mode: it exposes a SOCKS5 listener
+  # and leaves the routing table and DNS alone, so Tailscale keeps working.
+  # warp:
+  #   image: ghcr.io/aleskxyz/warp-svc:latest
+  #   container_name: warp
+  #   volumes:
+  #     - ./warp:/var/lib/cloudflare-warp   # persists the WARP registration
+  #   restart: unless-stopped
+
   discord-livechat-bot:
+    image: livechat-dl-bot:latest
     build: .
+    container_name: livechat-dl-bot
     env_file: .env
     environment:
+      DATA_DIR: /data
       COOKIES_FILE: /cookies/cookies.txt
+      # Uncomment together with the warp service above.
+      # YOUTUBE_PROXY: socks5://warp:1080
+    # Uncomment together with the warp service above.
+    # depends_on:
+    #   - warp
     volumes:
       - ./data:/data
       - ./cookies:/cookies:ro
