@@ -1,10 +1,25 @@
 import asyncio
+import logging
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
+from urllib.parse import urlsplit, urlunsplit
 
 from ...domain.models import StreamInfo
 from ...utils.filesystem import safe_file_component
+
+log = logging.getLogger(__name__)
+
+
+def _redact_proxy(proxy: str) -> str:
+    """Hide credentials embedded in a proxy URL so it is safe to log."""
+    parsed = urlsplit(proxy)
+    if not parsed.username:
+        return proxy
+    host = parsed.hostname or ""
+    if parsed.port:
+        host = f"{host}:{parsed.port}"
+    return urlunsplit((parsed.scheme, f"***@{host}", parsed.path, parsed.query, parsed.fragment))
 
 
 class StreamResolutionError(RuntimeError):
@@ -16,6 +31,17 @@ class LiveChatDownloadError(RuntimeError):
 
 
 class YTDLPClient:
+    def __init__(self, proxy: str | None = None):
+        self._proxy = proxy or None
+        if self._proxy:
+            log.info("yt-dlp requests will use proxy %s", _redact_proxy(self._proxy))
+
+    def _apply_shared_options(self, options: dict[str, Any], cookies_file: Path | None) -> None:
+        if cookies_file:
+            options["cookiefile"] = str(cookies_file)
+        if self._proxy:
+            options["proxy"] = self._proxy
+
     async def get_stream_info(self, url: str, cookies_file: Path | None = None) -> StreamInfo:
         return await asyncio.to_thread(self._get_stream_info, url, cookies_file)
 
@@ -27,8 +53,7 @@ class YTDLPClient:
                 "ignore_no_formats_error": True, "noprogress": True,
                 "js_runtimes": {"node": {}},
             }
-            if cookies_file:
-                options["cookiefile"] = str(cookies_file)
+            self._apply_shared_options(options, cookies_file)
             with YoutubeDL(options) as ydl:
                 info: dict[str, Any] = ydl.extract_info(url, download=False)
         except Exception as exc:
@@ -70,8 +95,7 @@ class YTDLPClient:
                 "progress_hooks": [progress_hook],
                 "js_runtimes": {"node": {}},
             }
-            if cookies_file:
-                opts["cookiefile"] = str(cookies_file)
+            self._apply_shared_options(opts, cookies_file)
             with YoutubeDL(opts) as ydl:
                 info = ydl.extract_info(url, download=True)
                 info_id = str(info.get("id")) if info else None

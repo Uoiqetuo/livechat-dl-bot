@@ -2,6 +2,19 @@ import os
 from dataclasses import dataclass
 from pathlib import Path
 
+# Checked in order. YOUTUBE_PROXY applies to yt-dlp only; the remaining names
+# are the conventional variables other tools on the host may already set.
+PROXY_ENV_VARS = ("YOUTUBE_PROXY", "HTTPS_PROXY", "https_proxy", "HTTP_PROXY", "http_proxy")
+
+
+def resolve_proxy() -> str | None:
+    """Return the first non-empty proxy URL from the environment, if any."""
+    for name in PROXY_ENV_VARS:
+        value = os.getenv(name, "").strip()
+        if value:
+            return value
+    return None
+
 
 @dataclass(slots=True)
 class Config:
@@ -16,6 +29,7 @@ class Config:
     shutdown_timeout_seconds: float = 30
     command_prefix: str = "!"
     cookies_file: Path = Path("./cookies/cookies.txt")
+    proxy: str | None = None
 
     @classmethod
     def load(cls, env_file: str | Path | None = ".env") -> "Config":
@@ -38,4 +52,5 @@ class Config:
             discord_ui_timezone=os.getenv("DISCORD_UI_TIMEZONE", "Asia/Taipei"),
             shutdown_timeout_seconds=float(os.getenv("SHUTDOWN_TIMEOUT_SECONDS", "30")),
             command_prefix=os.getenv("COMMAND_PREFIX", "!"),
+            proxy=resolve_proxy(),
         )

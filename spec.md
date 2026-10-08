@@ -467,7 +467,8 @@ ydl_opts = {
 
 The same `js_runtimes` option must be used for metadata resolution and live
 chat download. If `cookies_file` is provided, pass it to yt-dlp as
-`"cookiefile": str(cookies_file)`.
+`"cookiefile": str(cookies_file)`. If a proxy is configured, pass it to both
+calls as `"proxy": proxy`.
 
 The output filename must be based on the YouTube video ID.
 
@@ -1773,6 +1774,8 @@ DISCORD_UI_TIMEZONE=Asia/Taipei
 
 Optional permission configuration may be added if required.
 
+Optional proxy configuration is documented in section 60.
+
 Do not hard-code credentials.
 
 ---
@@ -2197,6 +2200,65 @@ no recovery
     ↓
 previous non-terminal Jobs → FAILED
 ```
+
+---
+
+# 60. Outbound Proxy
+
+YouTube may throttle or reject the `live_chat` endpoint when the host IP
+belongs to a datacenter range, returning HTTP 403 or HTTP 503 even when the
+cookies are valid. A proxy is therefore supported as an optional outbound path
+for yt-dlp only.
+
+Configuration:
+
+```env
+YOUTUBE_PROXY=socks5://warp:1080
+```
+
+Requirements:
+
+* Read the proxy from the environment, never from source control.
+* `YOUTUBE_PROXY` applies to yt-dlp only and takes precedence.
+* `HTTPS_PROXY`, `https_proxy`, `HTTP_PROXY` and `http_proxy` are honoured as
+  fallbacks, in that order, when `YOUTUBE_PROXY` is unset or empty.
+* Accept `http`, `https`, `socks5` and `socks5h` URLs. No extra Python package
+  is required; yt-dlp bundles its own SOCKS client.
+* When unset, connect directly. The proxy must not change any behaviour other
+  than the network path.
+* Apply the proxy identically to metadata resolution and live chat download.
+* Log the active proxy once at startup, with any credentials in the URL
+  redacted. Never log the raw proxy URL.
+
+Configuration reaches `YTDLPClient` through `Config.load()` and constructor
+injection; `main.py` performs the wiring.
+
+`compose.yaml` ships a commented-out Cloudflare WARP sidecar supplying such a
+proxy. It is commented out by default, so a deployment that does not need the
+proxy starts only the bot and connects directly. Uncommenting the `warp`
+block, the `YOUTUBE_PROXY` line and `depends_on` enables it. All three must be
+enabled together.
+
+The sidecar must run in WARP proxy mode. In proxy mode WARP binds its listener
+to the container loopback and a forwarder publishes it on the Compose network,
+so the host routing table and DNS are left untouched. WARP's default
+full-tunnel mode replaces both, which breaks a co-installed Tailscale node.
+
+The WARP registration volume is host-mounted so registration survives restarts,
+and is excluded from source control and the Docker build context. The sidecar
+requires a tun device, so the Compose definition re-adds the device cgroup rule
+removed by containerd 1.7.24 or later and grants `NET_ADMIN`.
+
+Bootstrapping is a one-time step. The client must connect in full-tunnel mode
+before it can be switched, so proxy mode is entered after the first successful
+registration and the sidecar is then recreated.
+
+The sidecar health check must verify the tunnel, not merely that the daemon
+started, by requiring a request through the SOCKS5 listener to report the
+tunnel as active. The built-in check does not cover this.
+
+Because a successful download alone does not prove the proxy is in use, the
+exit IP must be inspected: the tunnel address, not the host address.
 
 The Discord UI contains no progress percentage, ETA, speed, byte count, progress bar, or chat-message count.
 

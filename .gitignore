@@ -1,6 +1,7 @@
 .env
 cookies/*
 !cookies/PUT_COOKIES_FILE_HERE
+warp/
 __pycache__/
 *.py[cod]
 .pytest_cache/
@@ -8,3 +9,4 @@ __pycache__/
 data/database.sqlite3
 data/jobs/*
 !data/jobs/.gitkeep
+*.log
