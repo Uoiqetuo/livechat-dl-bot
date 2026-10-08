@@ -10,6 +10,23 @@ from ...utils.filesystem import safe_file_component
 
 log = logging.getLogger(__name__)
 
+# yt-dlp leaves fragment_retries and retries unset by default, and
+# RetryManager.__init__ does `self.retries = _retries or 0`, so a live_chat
+# fragment request is attempted exactly once. The live continuation endpoint
+# returns 503 under sustained polling, which would otherwise end a recording
+# that has already been running for hours.
+#
+# The download is deliberately not retried as a whole. While a stream is live,
+# yt-dlp uses the get_live_chat endpoint, which returns messages from the
+# current moment rather than from the beginning, so a fresh attempt would
+# discard everything recorded so far and could still succeed while yielding a
+# file containing only the last few minutes. Failing honestly is better than
+# reporting a truncated recording as complete.
+FRAGMENT_RETRIES = 30
+HTTP_RETRIES = 10
+# Space out polling so the continuation endpoint sees fewer requests.
+REQUEST_SLEEP_SECONDS = 1
+
 
 def _redact_proxy(proxy: str) -> str:
     """Hide credentials embedded in a proxy URL so it is safe to log."""
@@ -94,6 +111,14 @@ class YTDLPClient:
                 "outtmpl": str(output_dir / "%(id)s.%(ext)s"), "quiet": True,
                 "progress_hooks": [progress_hook],
                 "js_runtimes": {"node": {}},
+                # A live_chat fragment request defaults to zero retries
+                # (RetryManager treats an absent value as 0), so a single
+                # transient 503 from the live continuation endpoint aborts the
+                # whole recording. Retry fragments, and slow the polling down so
+                # the endpoint is hit less often.
+                "fragment_retries": FRAGMENT_RETRIES,
+                "retries": HTTP_RETRIES,
+                "sleep_interval_requests": REQUEST_SLEEP_SECONDS,
             }
             self._apply_shared_options(opts, cookies_file)
             with YoutubeDL(opts) as ydl:
